@@ -41,9 +41,12 @@ user_input = st.text_area("Analiz edilecek yorumu giriniz: ", height=150, placeh
 
 # Analiz butonu
 if st.button("Yorumu Analiz Et", use_container_width=True):
-    # Kutu boşsa uyar
+    st.session_state.analiz_izni = True
+
+if st.session_state.get("analiz_izni", False):
+    #kutu boşsa uyar
     if user_input.strip() == "":
-        st.warning("Lütfen analiz etmek için bir yorum yazın!")
+        st.warning("Lütfen analiz etmek için bir yorum yazın")
     
 
     else:
