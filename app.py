@@ -1,5 +1,5 @@
 import streamlit as st
-import joblib
+from transformers import pipeline
 from utils import metin_on_isleme
 import csv
 import os
@@ -29,12 +29,12 @@ st.markdown("Yapay Zeka modelimizle, müşteri yorumlarının Pozitif, Negatif v
 st.divider()
 
 @st.cache_resource
-def load_models():
-    yuklenen_sozluk = joblib.load("models/vectorizer.pkl")
-    yuklenen_model = joblib.load("models/nb_model.pkl")
-    return yuklenen_sozluk, yuklenen_model
+def load_bert_model():
+    #pipeline ile modeli ve sözlüğü projemize bağlıyoruz
+    return pipeline("text-classification", model="models/bert_duygu_modeli", tokenizer="models/bert_duygu_modeli")
 
-vectorizer, nb_model = load_models()
+duygu_analizoru = load_bert_model()
+
 
 # Kullanıcıdan alınacak metin kutusu
 user_input = st.text_area("Analiz edilecek yorumu giriniz: ", height=150, placeholder="Örn: Kargo çok hızlı geldi ama ürünün kutusu ezilmişti.")
@@ -53,61 +53,57 @@ if st.session_state.get("analiz_izni", False):
         # Modüler temizlik motorumuzla metni temizle
         temiz_yorum = metin_on_isleme(user_input)
         
-        # Metni matematiğe çevir
-        metin_vektoru = vectorizer.transform([temiz_yorum])
-        
-        #güvenlik önlemi
-        if metin_vektoru.sum() == 0:
-            st.warning("Girdiğiniz kelimeler (örn: özel isimler) yapay zeka sözlüğümüzde bulunamadı. Lütfen e-ticaret ile ilgili geçerli bir yorum yazın!")
-            
-        else:
-            # Modelden tahmin ve olasılık iste
-            tahmin = nb_model.predict(metin_vektoru)[0]
-            olasiliklar = nb_model.predict_proba(metin_vektoru)[0]
-            en_yuksek_olasilik = max(olasiliklar) * 100
+        #bert pipeline ile tahmin yapma
+        sonuc = duygu_analizoru(temiz_yorum)[0]
+
+        #LABEL_0, LABEL_1, LABEL_2 yi tekrar ingilizce metinlere çevirelim
+        label_mapping = {"LABEL_0": "Negative", "LABEL_1": "Neutral", "LABEL_2":"Positive"}
+
+        tahmin=label_mapping[sonuc["label"]]
+        en_yuksek_olasilik = sonuc["score"]*100
             
             # Sonucu ekrana bas
-            st.subheader("Analiz Sonucu:")
+        st.subheader("Analiz Sonucu:")
 
-            if tahmin == "Positive":
-                st.success("🟢 Pozitif yorum")
-                st.balloons()
-            elif tahmin == "Negative":
-                st.error("🔴 Negatif yorum")
-            else:
-                st.info("⚪ Nötr yorum")
-                
-            # Güven Skoru Uyarısı
-            if en_yuksek_olasilik < 50:
-                st.warning(f"Model bu tahminden tam emin değil (Güven Skoru: %{en_yuksek_olasilik:.1f}). Yorum hem olumlu hem olumsuz öğeler içeriyor olabilir.")
-            else:
-                st.caption(f"Modelin Karar Güveni: %{en_yuksek_olasilik:.1f}")
+        if tahmin == "Positive":
+            st.success("🟢 Pozitif yorum")
+            st.balloons()
+        elif tahmin == "Negative":
+            st.error("🔴 Negatif yorum")
+        else:
+            st.info("⚪ Nötr yorum")
+            
+        # Güven Skoru Uyarısı
+        if en_yuksek_olasilik < 50:
+            st.warning(f"Model bu tahminden tam emin değil (Güven Skoru: %{en_yuksek_olasilik:.1f}). Yorum hem olumlu hem olumsuz öğeler içeriyor olabilir.")
+        else:
+            st.caption(f"Modelin Karar Güveni: %{en_yuksek_olasilik:.1f}")
 
-            #aktif öğrenme butonları
-            st.divider()
-            st.write("Modelin tahmini doğru mu ?")
+        #aktif öğrenme butonları
+        st.divider()
+        st.write("Modelin tahmini doğru mu ?")
 
-            #yan yana 2 tane sütun (kolon) oluşturuyoruz.
-            col1, col2 = st.columns(2)
+        #yan yana 2 tane sütun (kolon) oluşturuyoruz.
+        col1, col2 = st.columns(2)
 
-            #1.kolon doğru butonu
-            with col1:
-                if st.button("Doğru bildin", use_container_width=True):
-                    st.success("Güzel, onayınız modelimizin kendine güvenini arttırdı.")
+        #1.kolon doğru butonu
+        with col1:
+            if st.button("Doğru bildin", use_container_width=True):
+                st.success("Güzel, onayınız modelimizin kendine güvenini arttırdı.")
 
-            #2.kollon: yanlış butonu ve düzeltme menüsü
-            with col2:
-                #kullanıcı yanlış derse aşağı doğru açılan bir menü ortaya çıkacak(expander)
-                with st.expander("Yanlış bildin (Modeli Eğit)"):
-                    with st.form("geri_bildirim_formu"):
-                        gercek_secim = st.selectbox("Sizce doğrusu neydi?", ["Positive", "Negative", "Neutral", "Belirsiz"])
+        #2.kollon: yanlış butonu ve düzeltme menüsü
+        with col2:
+            #kullanıcı yanlış derse aşağı doğru açılan bir menü ortaya çıkacak(expander)
+            with st.expander("Yanlış bildin (Modeli Eğit)"):
+                with st.form("geri_bildirim_formu"):
+                    gercek_secim = st.selectbox("Sizce doğrusu neydi?", ["Positive", "Negative", "Neutral", "Belirsiz"])
 
-                        #formun kendine özel gönder butonuna basılana kadar sayfayı yenilemez
-                        submit = st.form_submit_button("Hatayı gönder")
+                    #formun kendine özel gönder butonuna basılana kadar sayfayı yenilemez
+                    submit = st.form_submit_button("Hatayı gönder")
 
-                        if submit:
-                            geri_bildirim_kaydet(user_input, tahmin, gercek_secim)
-                            st.success("Geri bildirim kaydedildi")
+                    if submit:
+                        geri_bildirim_kaydet(user_input, tahmin, gercek_secim)
+                        st.success("Geri bildirim kaydedildi")
 
 
 
