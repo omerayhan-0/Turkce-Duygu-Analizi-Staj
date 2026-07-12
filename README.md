@@ -1,28 +1,29 @@
-# 🛍️ Türkçe E-Ticaret Duygu Analizi (Sentiment Analysis)
+# 🛍️ Türkçe E-Ticaret Duygu Analizi (BERTürk tabanlı NLP Projesi)
 
-Bu proje, Türkçe e-ticaret yorumlarının duygu durumunu (Pozitif, Negatif, Nötr) sınıflandırmak amacıyla geliştirilmiş, Uçtan Uca (End-to-End) bir Makine Öğrenmesi (NLP) uygulamasıdır. Proje, 45.000 satırlık dengeli bir veri seti kullanılarak eğitilmiş olup kullanıcı dostu bir Streamlit web arayüzü ile sunulmaktadır.
+Bu proje, Türkçe e-ticaret yorumlarının duygu durumunu (Pozitif, Negatif, Nötr) sınıflandırmak amacıyla geliştirilmiş, Uçtan Uca (End-to-End) bir Derin Öğrenme (Deep Learning) uygulamasıdır. Proje, Hugging Face **BERTürk** modelinin ince ayar (Fine-Tuning) yöntemiyle 120.000 satırlık devasa ve dengeli bir veri seti üzerinde eğitilmesiyle oluşturulmuş olup, kurumsal bir Streamlit web arayüzü ve interaktif panellerle (Dashboard) sunulmaktadır.
 
 ## 🚀 Özellikler
 
-- **Dengeli Veri Seti:** Nötr sınıf zorluklarını aşmak adına her sınıftan (Pozitif, Negatif, Nötr) 15.000'er adet veri çekilerek oluşturulmuş 45.000 yorumluk dengeli veri seti.
-- **Akıllı Metin Ön İşleme:** Türkçe'nin sondan eklemeli yapısına uygun olarak kök bulma (stemming) iptal edilmiş ve anlamsal (semantic) bütünlük korunmuştur.
-- **Gelişmiş Güvenlik:** 
-  - **OOV (Out-of-Vocabulary) Koruması:** Anlamsız (Örn: "123123") veya sözlükte olmayan kelimeler girildiğinde modelin çökmesini veya uydurmasını engelleyen Vektör Toplamı (Zero-Sum) kalkanı.
-  - **Güven Skoru (Confidence Score):** Modelin tahmin güvencesini (`predict_proba`) ölçerek, kararında %50'nin altında emin olduğu (Örn: *Kulaklığın tadı güzel*) durumlarda kullanıcıya uyarı (Explainable AI) veren şeffaf karar mekanizması.
-- **Modüler Mimari (DRY):** Kod tekrarını önlemek için veri temizleme fonksiyonları `utils.py` isimli merkezi bir dosyada toplanmıştır.
+- **Derin Öğrenme Altyapısı (BERTürk):** Klasik algoritmaların sınırları aşılarak, çift anlamlı ve kinayeli cümleleri anlayabilen Transformer tabanlı BERT modeli kullanılmıştır.
+- **Dengeli Büyük Veri Seti:** Nötr sınıf zorluklarını aşmak ve ezberlemeyi önlemek adına her sınıftan (Pozitif, Negatif, Nötr) 40.000'er adet veri çekilerek oluşturulmuş 120.000 yorumluk dengeli veri seti.
+- **Gelişmiş Veri Ön İşleme:** Türkçe'nin yapısına uygun olarak kök bulma (stemming) işlemi iptal edilmiş, RegEx ve NLTK ile durdurma kelimeleri temizlenmiş ve anlamsal bütünlük korunmuştur.
+- **OOV (Out-of-Vocabulary) Koruması:** Sözlükte olmayan veya anlamsız girdilere (Örn: "123123") karşı modelin uydurmasını ve hata vermesini engelleyen güvenlik mekanizması.
+- **Toplu Veri Analizi (Batch Processing):** Arayüz üzerinden Excel ve CSV dosyaları yüklenerek saniyeler içinde binlerce yorumun analiz edilmesi sağlanmıştır.
+- **Şeffaf Yapay Zeka (Explainable AI):** Modelin tahmin güvencesini ölçen "Güven Skoru" (`predict_proba`) eklenerek, sistemin verdiği kararlar açıklanabilir hale getirilmiştir.
+- **Aktif Öğrenme (Geri Bildirim):** Kullanıcıların modelin tahminlerine "Doğru/Yanlış" bildirimi yapabilmesi için `session_state` tabanlı özel formlar oluşturulmuştur.
+- **UI/UX ve Dashboard:** Analiz sonuçları Plotly grafikleri ile kurumsal bir Sidebar ve Dashboard üzerinden interaktif olarak görselleştirilmiştir. Export özelliğiyle sonuçlar indirilebilir.
 
 ## 🛠️ Kullanılan Teknolojiler
 
 - **Python 3.13**
-- **Scikit-Learn:** TF-IDF Vektörizasyonu ve Naive Bayes (MultinomialNB) Sınıflandırma
-- **NLTK / RegEx:** Durdurma kelimeleri (Stopwords), noktalama ve rakam temizliği
-- **Pandas:** Veri işleme, manipülasyon ve analiz
-- **Streamlit:** Web Arayüzü (Frontend)
-- **HuggingFace Datasets:** E-ticaret veri setinin çekilmesi
+- **Transformers (Hugging Face) & PyTorch:** BERT modelinin indirilmesi, GPU'da eğitilmesi (`Trainer`) ve `pipeline` ile entegrasyonu.
+- **Pandas:** Toplu veri işleme ve manipülasyon.
+- **Streamlit:** Dinamik web arayüzünün (Frontend) oluşturulması.
+- **Plotly:** Etkileşimli pasta ve çubuk grafiklerin (Dashboard) çizdirilmesi.
 
 ## ⚙️ Kurulum ve Çalıştırma
 
-Projeyi kendi bilgisayarınızda çalıştırmak için aşağıdaki adımları izleyebilirsiniz:
+Projeyi kendi bilgisayarınızda (localhost) çalıştırmak için aşağıdaki adımları izleyebilirsiniz:
 
 1. Depoyu bilgisayarınıza klonlayın:
    ```bash
@@ -42,11 +43,12 @@ Projeyi kendi bilgisayarınızda çalıştırmak için aşağıdaki adımları i
 
 ## 🧠 Model Detayları
 
-- **Algoritma:** Naive Bayes (MultinomialNB)
-- **Vektörizasyon:** TF-IDF (1,2 n-gram aralığı ile)
-- **Doğruluk Oranı (Accuracy):** ~%77
-- Neden Naive Bayes? Veri setindeki 172.000 kelimelik yüksek boyutlu özellik (feature) uzayında çok hızlı ve etkili çalıştığı için seçilmiştir.
+- **Algoritma:** BERTürk (bert-base-turkish-cased) - Fine Tuned
+- **Eğitim Donanımı:** Tesla T4 GPU (Google Colab üzerinden 3 Epoch otonom eğitim)
+- **Doğruluk Oranı (Accuracy):** %81.6
+- **F1-Skoru:** %81.5
+- **Gelişim Süreci:** Projenin başlangıcında Naive Bayes gibi klasik modellerle %77 başarılarda kalınmış, ardından veri seti 120.000 satıra çıkarılarak ölçekleme testleri (Scaling) yapılmış ve Epoch-2'de en iyi genelleştirmeyi yapan Derin Öğrenme mimarisi ana modele (checkpoint-11996) dönüştürülmüştür.
 
 ## 🧑‍💻 Geliştirici
-**Ömer Faruk Ayhan**
+**Ömer Faruk Ayhan**  
 Bera Ar-Ge Yazılım - Staj Projesi
