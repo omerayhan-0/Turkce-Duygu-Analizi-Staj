@@ -7,3 +7,7 @@ notebook
 datasets
 transformers
 torch
+plotly
+wordcloud
+matplotlib
+openpyxl
