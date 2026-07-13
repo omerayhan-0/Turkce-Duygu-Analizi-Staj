@@ -5,6 +5,8 @@ import csv
 import os
 import pandas as pd
 import plotly.express as px
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 
 def geri_bildirim_kaydet(yorum, modelin_tahmini, gercek_duygu):
@@ -22,9 +24,44 @@ def geri_bildirim_kaydet(yorum, modelin_tahmini, gercek_duygu):
         yazici.writerow([yorum, modelin_tahmini, gercek_duygu])
 
 # Sayfa ayarları
-st.set_page_config(page_title="Duygu Analizi V1", layout="centered")
+st.set_page_config(page_title="Türkçe Duygu Analizi | AI Platform", page_icon="🧠", layout="wide")
 
-# Arayüz tasarımı
+#Yan menü (Sidebar)
+with st.sidebar:
+    st.title("AI Duygu Analizi")
+    st.caption("Sürüm 1.0 | BERTürk Tabanlı")
+    st.divider()
+    
+    # Kullanım Kılavuzu
+    with st.expander("📖 Kullanım Kılavuzu"):
+        st.markdown("""
+        **Tekli Yorum Analizi:**
+        1. Metin kutusuna analiz edilecek yorumu yazın.
+        2. "Yorumu Analiz Et" butonuna basın.
+        3. Sonuç ekrana gelecektir.
+        
+        **Toplu Excel/CSV Analizi:**
+        1. İçinde metin sütunu bulunan bir `.csv` veya `.xlsx` dosyası yükleyin.
+        2. Açılır listeden analiz edilecek sütunu seçin.
+        3. "Tümünü Analiz Et" butonuna basın.
+        4. Sonuç tablosu ve grafikler otomatik oluşturulacaktır.
+        """)
+    
+    # Sistem Bilgisi
+    with st.expander("⚙️ Sistem Bilgisi"):
+        st.markdown("""
+        - **Model:** BERTürk (dbmdz/bert-base-turkish-cased)
+        - **Eğitim Verisi:** 120.000 Türkçe yorum
+        - **Sınıflar:** Pozitif, Negatif, Nötr
+        - **Güven Eşiği:** %55
+        - **Epoch:** 2 (Overfitting önleme)
+        """)
+    
+    st.divider()
+    st.caption("Geliştirici: Ömer Faruk Ayhan")
+    st.caption("© 2026 - Proje")
+
+#ANASAYFA
 st.title("🛍️ Türkçe E-Ticaret Duygu Analizi")
 st.markdown("Yapay Zeka modelimizle, müşteri yorumlarının Pozitif, Negatif veya Nötr olduğunu anında tespit edin")
 
@@ -66,8 +103,7 @@ with tab_tekli:
             #bert pipeline ile tahmin yapma
             sonuc = duygu_analizoru(temiz_yorum)[0]
 
-            #LABEL_0, LABEL_1, LABEL_2 yi tekrar ingilizce metinlere çevirelim
-            label_mapping = {"LABEL_0": "Negative", "LABEL_1": "Neutral", "LABEL_2":"Positive"}
+            # Global label_mapping sözlüğünü kullanıyoruz (yukarıda tanımlı)
 
             tahmin=label_mapping[sonuc["label"]]
             en_yuksek_olasilik = sonuc["score"]*100
@@ -171,12 +207,38 @@ with tab_toplu:
                     
                     st.success("Tüm analizler tamamlandı!")
                     
+                    # Hızlı özet kısmı
+                    toplam_yorum = len(df_toplu)
+                    gecerli_sayisi = len([s for s in sonuclar if 'Anlamsız' not in s])
+                    anlamsiz_sayisi = toplam_yorum - gecerli_sayisi
+                    pozitif_sayisi = sonuclar.count('Positive')
+                    negatif_sayisi = sonuclar.count('Negative')
+                    notr_sayisi = sonuclar.count('Neutral')
+                    
+                    st.divider()
+                    met1, met2, met3, met4, met5 = st.columns(5)
+                    met1.metric("📝 Toplam Yorum", toplam_yorum)
+                    met2.metric("✅ Geçerli", gecerli_sayisi)
+                    met3.metric("🟢 Pozitif", pozitif_sayisi)
+                    met4.metric("🔴 Negatif", negatif_sayisi)
+                    met5.metric("⚪ Nötr / 🚫 Anlamsız", f"{notr_sayisi} / {anlamsiz_sayisi}")
+                    
                     # Sonuç tablosunu ekrana bas
-                    st.dataframe(df_toplu)
+                    st.divider()
+                    st.dataframe(df_toplu, use_container_width=True)
+
+                    #sonuçları csv olarak indirme
+                    csv_verisi = df_toplu.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Sonuçları CSV olarak indir",
+                        data=csv_verisi,
+                        file_name="duygu_analizi_sonucları.csv",
+                        mime="text/csv" #dosya kimlik kartı
+                    )
                     
                     # Dashboard GRAFİK kısmı
                     st.divider()
-                    st.subheader("Analiz İstatistikleri")
+                    st.subheader("📊 Analiz İstatistikleri")
                     
                     # Sadece geçerli tahminleri (Anlamsız yazmayanları) grafik yapalım
                     gecerli_tahminler = df_toplu[~df_toplu['Yapay_Zeka_Karari'].str.contains('Anlamsız')]
@@ -198,14 +260,47 @@ with tab_toplu:
                             # 2. Grafik: Sütun Grafiği (Sayısal Karşılaştırma)
                             fig_bar = px.bar(duygu_dagilimi, x='Duygu', y='Sayı', title='Sayısal Karşılaştırma', color='Duygu', color_discrete_map={'Positive':'#00cc96', 'Negative':'#ef553b', 'Neutral':'#636efa'})
                             st.plotly_chart(fig_bar, use_container_width=True)
+                        
+                        #KELİME BULUTU
+                        st.divider()
+                        st.subheader("Yorumların Odak Noktaları")
+
+                        col_wc1, col_wc2 = st.columns(2)
+
+                        #Negatif Kelime Bulutu
+                        with col_wc1:
+                            st.markdown("##### 🔴 Negatif Yorumların Temel Nedenleri")
+                            negatif_yorumlar = gecerli_tahminler[gecerli_tahminler['Yapay_Zeka_Karari'] == 'Negative']
+
+                            if not negatif_yorumlar.empty:
+                                #tüm negatif yorumları dev metne çeviriyoruz
+                                tum_negatif_metin = " ".join(str(yorum) for yorum in negatif_yorumlar[secilen_sutun])
+                                wc_negatif = WordCloud(width=400, height=300, background_color='black', colormap='Reds').generate(tum_negatif_metin)
+
+                                fig_neg, ax_neg = plt.subplots(figsize = (6,4))
+                                ax_neg.imshow(wc_negatif, interpolation='bilinear')
+                                ax_neg.axis('off')
+                                st.pyplot(fig_neg)
+                            else:
+                                st.info("Negatif yorum bulunamadı.")
+
+                        #Pozitif Kelime Bulutu
+                        with col_wc2:
+                            st.markdown("##### 🟢 Pozitif Yorumların Öne Çıkanları")
+                            pozitif_yorumlar = gecerli_tahminler[gecerli_tahminler['Yapay_Zeka_Karari'] == 'Positive']
+
+                            if not pozitif_yorumlar.empty:
+                                #Tüm pozitif yorumları tek bir dev metne çeviriyoruz
+                                tum_pozitif_metin = " ".join(str(yorum) for yorum in pozitif_yorumlar[secilen_sutun])
+                                wc_pozitif = WordCloud(width=400, height=300, background_color='black', colormap='Greens').generate(tum_pozitif_metin)
+
+                                fig_pos, ax_pos = plt.subplots(figsize = (6,4))
+                                ax_pos.imshow(wc_pozitif, interpolation='bilinear')
+                                ax_pos.axis('off')
+                                st.pyplot(fig_pos)
+
                     else:
                         st.info("Grafik çizmek için yeterli (anlamlı) yorum bulunamadı.")
                         
         except Exception as e:
             st.error(f"Dosya okunurken bir hata oluştu: {e}")
-
-
-
-
-st.markdown("---")
-st.caption("Geliştirici: Ömer Faruk Ayhan")
