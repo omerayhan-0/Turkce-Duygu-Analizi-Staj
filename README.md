@@ -9,6 +9,7 @@ Bu proje, Türkçe e-ticaret yorumlarının duygu durumunu (Pozitif, Negatif, N�
 - **Gelişmiş Veri Ön İşleme:** Türkçe'nin yapısına uygun olarak kök bulma (stemming) işlemi iptal edilmiş, RegEx ve NLTK ile durdurma kelimeleri temizlenmiş ve anlamsal bütünlük korunmuştur.
 - **OOV (Out-of-Vocabulary) Koruması:** Sözlükte olmayan veya anlamsız girdilere (Örn: "123123") karşı modelin uydurmasını ve hata vermesini engelleyen güvenlik mekanizması.
 - **Toplu Veri Analizi (Batch Processing):** Arayüz üzerinden Excel ve CSV dosyaları yüklenerek saniyeler içinde binlerce yorumun analiz edilmesi sağlanmıştır.
+- **Kök Neden Analizi (Word Cloud):** Analiz sonuçlarındaki negatif ve pozitif yorumların odak noktalarını dinamik kelime bulutlarıyla (Word Cloud) görselleştirerek satıcılara İş Zekası (BI) içgörüleri sunar.
 - **Şeffaf Yapay Zeka (Explainable AI):** Modelin tahmin güvencesini ölçen "Güven Skoru" (`predict_proba`) eklenerek, sistemin verdiği kararlar açıklanabilir hale getirilmiştir.
 - **Aktif Öğrenme (Geri Bildirim):** Kullanıcıların modelin tahminlerine "Doğru/Yanlış" bildirimi yapabilmesi için `session_state` tabanlı özel formlar oluşturulmuştur.
 - **UI/UX ve Dashboard:** Analiz sonuçları Plotly grafikleri ile kurumsal bir Sidebar ve Dashboard üzerinden interaktif olarak görselleştirilmiştir. Export özelliğiyle sonuçlar indirilebilir.
